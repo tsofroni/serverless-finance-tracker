@@ -1,0 +1,55 @@
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  background: #1a1a2e;
+  color: #fff;
+  padding: 1rem 2rem;
+}
+
+.header h1 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.nav {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 2rem;
+  background: #fff;
+  border-bottom: 1px solid #dde1e7;
+  flex-wrap: wrap;
+}
+
+.tab,
+.tabActive {
+  padding: 0.4rem 1.1rem;
+  border: 1px solid #ccc;
+  border-radius: 20px;
+  background: #fff;
+  color: #444;
+  font-size: 0.88rem;
+  transition: background 0.15s, color 0.15s;
+}
+
+.tab:hover {
+  background: #f0f2f5;
+}
+
+.tabActive {
+  background: #1a1a2e;
+  color: #fff;
+  border-color: #1a1a2e;
+}
+
+.main {
+  flex: 1;
+  padding: 2rem;
+  max-width: 960px;
+  width: 100%;
+  margin: 0 auto;
+}

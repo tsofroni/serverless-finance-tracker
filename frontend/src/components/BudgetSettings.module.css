@@ -1,0 +1,84 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.container h2 {
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.hint {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 1.1rem 1.25rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.catName {
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  color: #333;
+}
+
+.current {
+  font-size: 0.8rem;
+  color: #27ae60;
+  background: #f0fff4;
+  border-radius: 6px;
+  padding: 0.25rem 0.5rem;
+}
+
+.fieldLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.fieldLabel input {
+  padding: 0.45rem 0.65rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background: #fafafa;
+}
+
+.fieldLabel input:focus {
+  outline: none;
+  border-color: #e67e22;
+}
+
+.saveBtn {
+  padding: 0.45rem 1rem;
+  background: #e67e22;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.88rem;
+  margin-top: 0.25rem;
+  align-self: flex-start;
+}
+
+.saveBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
