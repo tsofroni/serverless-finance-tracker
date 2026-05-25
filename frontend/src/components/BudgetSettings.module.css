@@ -82,3 +82,17 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+.saved {
+  background: #27ae60;
+}
+
+.error {
+  background: #fdecea;
+  color: #c0392b;
+  border: 1px solid #e74c3c;
+  border-radius: 8px;
+  padding: 0.65rem 1rem;
+  font-size: 0.88rem;
+  grid-column: 1 / -1;
+}

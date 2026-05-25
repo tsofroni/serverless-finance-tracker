@@ -116,3 +116,12 @@
 .deleteBtn:hover {
   background: #fdecea;
 }
+
+.error {
+  background: #fdecea;
+  color: #c0392b;
+  border: 1px solid #e74c3c;
+  border-radius: 8px;
+  padding: 0.65rem 1rem;
+  font-size: 0.88rem;
+}

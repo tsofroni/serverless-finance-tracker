@@ -4,6 +4,7 @@ import ExpenseForm from "./components/ExpenseForm";
 import IncomeForm from "./components/IncomeForm";
 import SavingsGoals from "./components/SavingsGoals";
 import BudgetSettings from "./components/BudgetSettings";
+import { isApiConfigured } from "./services/api";
 import styles from "./App.module.css";
 
 const TABS = [
@@ -50,6 +51,11 @@ function App() {
           </button>
         ))}
       </nav>
+      {!isApiConfigured() && (
+        <div className={styles.apiWarning}>
+          VITE_API_URL is not set — API calls will fail. Rebuild the frontend with your API Gateway URL.
+        </div>
+      )}
       <main className={styles.main}>{renderTab()}</main>
     </div>
   );

@@ -28,6 +28,7 @@ function ExpenseForm() {
   const [form, setForm] = useState(INITIAL_FORM);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     load();
@@ -39,7 +40,7 @@ function ExpenseForm() {
       const data = await getExpenses();
       setExpenses(data.expenses || []);
     } catch (err) {
-      console.error(err);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -47,24 +48,26 @@ function ExpenseForm() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    setError(null);
     try {
       setSubmitting(true);
       await addExpense({ ...form, amount: parseFloat(form.amount) });
       setForm({ ...INITIAL_FORM, date: today() });
       await load();
     } catch (err) {
-      console.error(err);
+      setError(err.message);
     } finally {
       setSubmitting(false);
     }
   }
 
   async function handleDelete(id) {
+    setError(null);
     try {
       await deleteExpense(id);
       await load();
     } catch (err) {
-      console.error(err);
+      setError(err.message);
     }
   }
 
@@ -74,6 +77,8 @@ function ExpenseForm() {
   return (
     <div className={styles.container}>
       <h2>Expenses</h2>
+
+      {error && <div className={styles.error}>{error}</div>}
 
       <form className={styles.form} onSubmit={handleSubmit}>
         <input

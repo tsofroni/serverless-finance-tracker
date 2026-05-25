@@ -19,6 +19,7 @@ function IncomeForm() {
   const [form, setForm] = useState(INITIAL_FORM);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     load();
@@ -30,7 +31,7 @@ function IncomeForm() {
       const data = await getIncome();
       setIncome(data.income || []);
     } catch (err) {
-      console.error(err);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -38,24 +39,26 @@ function IncomeForm() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    setError(null);
     try {
       setSubmitting(true);
       await addIncome({ ...form, amount: parseFloat(form.amount) });
       setForm({ ...INITIAL_FORM, date: today() });
       await load();
     } catch (err) {
-      console.error(err);
+      setError(err.message);
     } finally {
       setSubmitting(false);
     }
   }
 
   async function handleDelete(id) {
+    setError(null);
     try {
       await deleteIncome(id);
       await load();
     } catch (err) {
-      console.error(err);
+      setError(err.message);
     }
   }
 
@@ -65,6 +68,8 @@ function IncomeForm() {
   return (
     <div className={styles.container}>
       <h2>Income</h2>
+
+      {error && <div className={styles.error}>{error}</div>}
 
       <form className={styles.form} onSubmit={handleSubmit}>
         <input

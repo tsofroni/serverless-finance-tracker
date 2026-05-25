@@ -25,6 +25,8 @@ function BudgetSettings() {
   const [formState, setFormState] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(null);
+  const [error, setError] = useState(null);
+  const [savedCategory, setSavedCategory] = useState(null);
 
   useEffect(() => {
     load();
@@ -40,7 +42,7 @@ function BudgetSettings() {
       });
       setBudgetsState(map);
     } catch (err) {
-      console.error(err);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -65,10 +67,17 @@ function BudgetSettings() {
     const monthlyLimit = parseFloat(getField(category, "monthlyLimit"));
     const alertThreshold = parseFloat(getField(category, "alertThreshold"));
 
-    if (!monthlyLimit || monthlyLimit <= 0) return;
-    if (isNaN(alertThreshold) || alertThreshold <= 0 || alertThreshold > 1)
+    if (!monthlyLimit || monthlyLimit <= 0) {
+      setError(`Please enter a monthly limit for "${category}".`);
       return;
+    }
+    if (isNaN(alertThreshold) || alertThreshold <= 0 || alertThreshold > 1) {
+      setError(`Alert threshold for "${category}" must be between 0.1 and 1.0.`);
+      return;
+    }
 
+    setError(null);
+    setSavedCategory(null);
     try {
       setSaving(category);
       await setBudget({ category, monthlyLimit, alertThreshold });
@@ -78,8 +87,10 @@ function BudgetSettings() {
         delete next[category];
         return next;
       });
+      setSavedCategory(category);
+      setTimeout(() => setSavedCategory(null), 2000);
     } catch (err) {
-      console.error(err);
+      setError(err.message);
     } finally {
       setSaving(null);
     }
@@ -94,6 +105,8 @@ function BudgetSettings() {
         Set a monthly spending limit per category. An alert email is sent when
         spending reaches the alert threshold.
       </p>
+
+      {error && <div className={styles.error}>{error}</div>}
 
       <div className={styles.grid}>
         {EXPENSE_CATEGORIES.map((category) => (
@@ -132,11 +145,11 @@ function BudgetSettings() {
               />
             </label>
             <button
-              className={styles.saveBtn}
+              className={`${styles.saveBtn} ${savedCategory === category ? styles.saved : ""}`}
               onClick={() => handleSave(category)}
               disabled={saving === category}
             >
-              {saving === category ? "Saving…" : "Save"}
+              {saving === category ? "Saving…" : savedCategory === category ? "Saved!" : "Save"}
             </button>
           </div>
         ))}

@@ -23,6 +23,7 @@ function SavingsGoals() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [depositing, setDepositing] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     load();
@@ -34,7 +35,7 @@ function SavingsGoals() {
       const data = await getSavings();
       setGoals(data.goals || []);
     } catch (err) {
-      console.error(err);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -42,6 +43,7 @@ function SavingsGoals() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    setError(null);
     try {
       setSubmitting(true);
       await addSavingGoal({
@@ -51,7 +53,7 @@ function SavingsGoals() {
       setForm(INITIAL_FORM);
       await load();
     } catch (err) {
-      console.error(err);
+      setError(err.message);
     } finally {
       setSubmitting(false);
     }
@@ -60,30 +62,34 @@ function SavingsGoals() {
   async function handleDeposit(goalId) {
     const amount = parseFloat(depositAmounts[goalId] || "0");
     if (!amount || amount <= 0) return;
+    setError(null);
     try {
       setDepositing(goalId);
       await updateSavingGoal(goalId, amount);
       setDepositAmounts((prev) => ({ ...prev, [goalId]: "" }));
       await load();
     } catch (err) {
-      console.error(err);
+      setError(err.message);
     } finally {
       setDepositing(null);
     }
   }
 
   async function handleDelete(goalId) {
+    setError(null);
     try {
       await deleteSavingGoal(goalId);
       await load();
     } catch (err) {
-      console.error(err);
+      setError(err.message);
     }
   }
 
   return (
     <div className={styles.container}>
       <h2>Savings Goals</h2>
+
+      {error && <div className={styles.error}>{error}</div>}
 
       <form className={styles.form} onSubmit={handleSubmit}>
         <input
