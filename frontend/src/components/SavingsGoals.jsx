@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import {
   getSavings,
   addSavingGoal,
-  updateSavingGoal,
+  depositToGoal,
+  editSavingGoal,
   deleteSavingGoal,
 } from "../services/api";
 import styles from "./SavingsGoals.module.css";
@@ -19,6 +20,7 @@ function formatCurrency(amount) {
 function SavingsGoals() {
   const [goals, setGoals] = useState([]);
   const [form, setForm] = useState(INITIAL_FORM);
+  const [editingGoalId, setEditingGoalId] = useState(null);
   const [depositAmounts, setDepositAmounts] = useState({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -41,15 +43,38 @@ function SavingsGoals() {
     }
   }
 
+  function startEdit(goal) {
+    setEditingGoalId(goal.goalId);
+    setError(null);
+    setForm({
+      name: goal.name,
+      targetAmount: String(goal.targetAmount),
+      deadline: goal.deadline,
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function cancelEdit() {
+    setEditingGoalId(null);
+    setForm(INITIAL_FORM);
+    setError(null);
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError(null);
     try {
       setSubmitting(true);
-      await addSavingGoal({
-        ...form,
-        targetAmount: parseFloat(form.targetAmount),
-      });
+      if (editingGoalId) {
+        await editSavingGoal(editingGoalId, {
+          name: form.name,
+          targetAmount: parseFloat(form.targetAmount),
+          deadline: form.deadline,
+        });
+        setEditingGoalId(null);
+      } else {
+        await addSavingGoal({ ...form, targetAmount: parseFloat(form.targetAmount) });
+      }
       setForm(INITIAL_FORM);
       await load();
     } catch (err) {
@@ -65,7 +90,7 @@ function SavingsGoals() {
     setError(null);
     try {
       setDepositing(goalId);
-      await updateSavingGoal(goalId, amount);
+      await depositToGoal(goalId, amount);
       setDepositAmounts((prev) => ({ ...prev, [goalId]: "" }));
       await load();
     } catch (err) {
@@ -79,6 +104,7 @@ function SavingsGoals() {
     setError(null);
     try {
       await deleteSavingGoal(goalId);
+      if (editingGoalId === goalId) cancelEdit();
       await load();
     } catch (err) {
       setError(err.message);
@@ -87,7 +113,7 @@ function SavingsGoals() {
 
   return (
     <div className={styles.container}>
-      <h2>Savings Goals</h2>
+      <h2>{editingGoalId ? "Edit Savings Goal" : "Savings Goals"}</h2>
 
       {error && <div className={styles.error}>{error}</div>}
 
@@ -117,8 +143,13 @@ function SavingsGoals() {
           required
         />
         <button type="submit" disabled={submitting}>
-          {submitting ? "Creating…" : "Create Goal"}
+          {submitting ? "Saving…" : editingGoalId ? "Update Goal" : "Create Goal"}
         </button>
+        {editingGoalId && (
+          <button type="button" className={styles.cancelBtn} onClick={cancelEdit}>
+            Cancel
+          </button>
+        )}
       </form>
 
       {loading ? (
@@ -137,7 +168,10 @@ function SavingsGoals() {
                 : 0;
             const done = progress >= 100;
             return (
-              <div key={goal.goalId} className={styles.goalCard}>
+              <div
+                key={goal.goalId}
+                className={`${styles.goalCard} ${editingGoalId === goal.goalId ? styles.editingCard : ""}`}
+              >
                 <div className={styles.goalHeader}>
                   <h3>
                     {goal.name}
@@ -180,6 +214,12 @@ function SavingsGoals() {
                     disabled={depositing === goal.goalId}
                   >
                     {depositing === goal.goalId ? "…" : "Deposit"}
+                  </button>
+                  <button
+                    className={styles.editBtn}
+                    onClick={() => startEdit(goal)}
+                  >
+                    Edit
                   </button>
                   <button
                     className={styles.deleteBtn}

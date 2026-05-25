@@ -31,27 +31,42 @@ async function request(path, options = {}) {
 export const getExpenses = () => request("/expenses");
 export const addExpense = (data) =>
   request("/expenses", { method: "POST", body: JSON.stringify(data) });
+export const editExpense = (id, data) =>
+  request(`/expenses?transactionId=${encodeURIComponent(id)}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
 export const deleteExpense = (id) =>
-  request(`/expenses/${encodeURIComponent(id)}`, { method: "DELETE" });
+  request(`/expenses?transactionId=${encodeURIComponent(id)}`, { method: "DELETE" });
 
 // Income
 export const getIncome = () => request("/income");
 export const addIncome = (data) =>
   request("/income", { method: "POST", body: JSON.stringify(data) });
+export const editIncome = (id, data) =>
+  request(`/income?transactionId=${encodeURIComponent(id)}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
 export const deleteIncome = (id) =>
-  request(`/income/${encodeURIComponent(id)}`, { method: "DELETE" });
+  request(`/income?transactionId=${encodeURIComponent(id)}`, { method: "DELETE" });
 
 // Savings goals
 export const getSavings = () => request("/savings");
 export const addSavingGoal = (data) =>
   request("/savings", { method: "POST", body: JSON.stringify(data) });
-export const updateSavingGoal = (id, amount) =>
-  request(`/savings/${encodeURIComponent(id)}`, {
+export const depositToGoal = (id, amount) =>
+  request(`/savings?goalId=${encodeURIComponent(id)}`, {
     method: "PUT",
-    body: JSON.stringify({ amount }),
+    body: JSON.stringify({ deposit: amount }),
+  });
+export const editSavingGoal = (id, data) =>
+  request(`/savings?goalId=${encodeURIComponent(id)}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
   });
 export const deleteSavingGoal = (id) =>
-  request(`/savings/${encodeURIComponent(id)}`, { method: "DELETE" });
+  request(`/savings?goalId=${encodeURIComponent(id)}`, { method: "DELETE" });
 
 // Budget
 export const getBudgets = () => request("/budget");

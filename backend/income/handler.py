@@ -18,7 +18,9 @@ def _get_table():
 
 def handler(event, context):
     method = event.get("httpMethod", "")
-    path_params = event.get("pathParameters") or {}
+    # Read ID from query params — avoids per-sub-resource CORS configuration
+    query_params = event.get("queryStringParameters") or {}
+    transaction_id = query_params.get("transactionId")
 
     if method == "OPTIONS":
         return success({})
@@ -26,8 +28,10 @@ def handler(event, context):
         return _create(event)
     if method == "GET":
         return _list()
+    if method == "PUT":
+        return _update(event, transaction_id)
     if method == "DELETE":
-        return _delete(path_params.get("transactionId"))
+        return _delete(transaction_id)
     return error("Method not allowed", 405)
 
 
@@ -72,9 +76,39 @@ def _list():
         return error(str(exc), 500)
 
 
+def _update(event, transaction_id):
+    if not transaction_id:
+        return error("transactionId query parameter is required")
+    try:
+        body = json.loads(event.get("body") or "{}")
+        amount = body.get("amount")
+        category = body.get("category")
+        description = body.get("description", "")
+        date = body.get("date")
+
+        if amount is None or not category or not date:
+            return error("Missing required fields: amount, category, date")
+
+        # 'date' is a DynamoDB reserved word — alias it with ExpressionAttributeNames
+        _get_table().update_item(
+            Key={"userId": USER_ID, "transactionId": transaction_id},
+            UpdateExpression="SET amount = :amt, category = :cat, description = :desc, #dt = :date",
+            ExpressionAttributeNames={"#dt": "date"},
+            ExpressionAttributeValues={
+                ":amt": Decimal(str(amount)),
+                ":cat": category,
+                ":desc": description,
+                ":date": date,
+            },
+        )
+        return success({"message": "Income updated"})
+    except Exception as exc:
+        return error(str(exc), 500)
+
+
 def _delete(transaction_id):
     if not transaction_id:
-        return error("transactionId path parameter is required")
+        return error("transactionId query parameter is required")
     try:
         _get_table().delete_item(
             Key={"userId": USER_ID, "transactionId": transaction_id}

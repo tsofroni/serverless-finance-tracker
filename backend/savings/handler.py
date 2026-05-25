@@ -17,7 +17,9 @@ def _get_table():
 
 def handler(event, context):
     method = event.get("httpMethod", "")
-    path_params = event.get("pathParameters") or {}
+    # Read ID from query params — avoids per-sub-resource CORS configuration
+    query_params = event.get("queryStringParameters") or {}
+    goal_id = query_params.get("goalId")
 
     if method == "OPTIONS":
         return success({})
@@ -26,9 +28,9 @@ def handler(event, context):
     if method == "GET":
         return _list()
     if method == "PUT":
-        return _deposit(event, path_params.get("goalId"))
+        return _update(event, goal_id)
     if method == "DELETE":
-        return _delete(path_params.get("goalId"))
+        return _delete(goal_id)
     return error("Method not allowed", 405)
 
 
@@ -69,21 +71,56 @@ def _list():
         return error(str(exc), 500)
 
 
-def _deposit(event, goal_id):
+def _update(event, goal_id):
     if not goal_id:
-        return error("goalId path parameter is required")
+        return error("goalId query parameter is required")
     try:
         body = json.loads(event.get("body") or "{}")
-        amount = body.get("amount")
 
-        if amount is None or Decimal(str(amount)) <= 0:
-            return error("amount must be a positive number")
+        # Deposit: body contains { "deposit": <amount> }
+        if "deposit" in body:
+            deposit = Decimal(str(body["deposit"]))
+            if deposit <= 0:
+                return error("deposit must be a positive number")
+            _get_table().update_item(
+                Key={"userId": USER_ID, "goalId": goal_id},
+                UpdateExpression="ADD currentAmount :amt",
+                ExpressionAttributeValues={":amt": deposit},
+            )
+            return success({"message": "Deposit added"})
 
-        _get_table().update_item(
-            Key={"userId": USER_ID, "goalId": goal_id},
-            UpdateExpression="ADD currentAmount :amt",
-            ExpressionAttributeValues={":amt": Decimal(str(amount))},
-        )
+        # Full edit: body contains { name, targetAmount, deadline, currentAmount? }
+        updates = []
+        values = {}
+        names = {}
+
+        if "name" in body:
+            # 'name' is a DynamoDB reserved word
+            updates.append("#nm = :name")
+            names["#nm"] = "name"
+            values[":name"] = body["name"]
+        if "targetAmount" in body:
+            updates.append("targetAmount = :target")
+            values[":target"] = Decimal(str(body["targetAmount"]))
+        if "deadline" in body:
+            updates.append("deadline = :deadline")
+            values[":deadline"] = body["deadline"]
+        if "currentAmount" in body:
+            updates.append("currentAmount = :current")
+            values[":current"] = Decimal(str(body["currentAmount"]))
+
+        if not updates:
+            return error("No fields to update")
+
+        kwargs = {
+            "Key": {"userId": USER_ID, "goalId": goal_id},
+            "UpdateExpression": "SET " + ", ".join(updates),
+            "ExpressionAttributeValues": values,
+        }
+        if names:
+            kwargs["ExpressionAttributeNames"] = names
+
+        _get_table().update_item(**kwargs)
         return success({"message": "Savings goal updated"})
     except Exception as exc:
         return error(str(exc), 500)
@@ -91,7 +128,7 @@ def _deposit(event, goal_id):
 
 def _delete(goal_id):
     if not goal_id:
-        return error("goalId path parameter is required")
+        return error("goalId query parameter is required")
     try:
         _get_table().delete_item(Key={"userId": USER_ID, "goalId": goal_id})
         return success({"message": "Savings goal deleted"})

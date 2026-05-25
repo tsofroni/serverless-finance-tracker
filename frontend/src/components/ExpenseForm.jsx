@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getExpenses, addExpense, deleteExpense } from "../services/api";
+import { getExpenses, addExpense, editExpense, deleteExpense } from "../services/api";
 import styles from "./ExpenseForm.module.css";
 
 const CATEGORIES = [
@@ -26,6 +26,7 @@ function formatCurrency(amount) {
 function ExpenseForm() {
   const [expenses, setExpenses] = useState([]);
   const [form, setForm] = useState(INITIAL_FORM);
+  const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -46,12 +47,36 @@ function ExpenseForm() {
     }
   }
 
+  function startEdit(expense) {
+    setEditingId(expense.transactionId);
+    setError(null);
+    setForm({
+      amount: String(expense.amount),
+      category: expense.category,
+      description: expense.description || "",
+      date: expense.date,
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setForm({ ...INITIAL_FORM, date: today() });
+    setError(null);
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError(null);
     try {
       setSubmitting(true);
-      await addExpense({ ...form, amount: parseFloat(form.amount) });
+      const payload = { ...form, amount: parseFloat(form.amount) };
+      if (editingId) {
+        await editExpense(editingId, payload);
+        setEditingId(null);
+      } else {
+        await addExpense(payload);
+      }
       setForm({ ...INITIAL_FORM, date: today() });
       await load();
     } catch (err) {
@@ -65,6 +90,7 @@ function ExpenseForm() {
     setError(null);
     try {
       await deleteExpense(id);
+      if (editingId === id) cancelEdit();
       await load();
     } catch (err) {
       setError(err.message);
@@ -76,7 +102,7 @@ function ExpenseForm() {
 
   return (
     <div className={styles.container}>
-      <h2>Expenses</h2>
+      <h2>{editingId ? "Edit Expense" : "Expenses"}</h2>
 
       {error && <div className={styles.error}>{error}</div>}
 
@@ -113,8 +139,13 @@ function ExpenseForm() {
           required
         />
         <button type="submit" disabled={submitting}>
-          {submitting ? "Adding…" : "Add Expense"}
+          {submitting ? "Saving…" : editingId ? "Update" : "Add Expense"}
         </button>
+        {editingId && (
+          <button type="button" className={styles.cancelBtn} onClick={cancelEdit}>
+            Cancel
+          </button>
+        )}
       </form>
 
       <div className={styles.totalBar}>
@@ -143,7 +174,10 @@ function ExpenseForm() {
               </tr>
             ) : (
               sorted.map((expense) => (
-                <tr key={expense.transactionId}>
+                <tr
+                  key={expense.transactionId}
+                  className={editingId === expense.transactionId ? styles.editingRow : ""}
+                >
                   <td>{expense.date}</td>
                   <td>
                     <span className={styles.badge}>{expense.category}</span>
@@ -152,7 +186,13 @@ function ExpenseForm() {
                   <td className={styles.amountCell}>
                     {formatCurrency(expense.amount)}
                   </td>
-                  <td>
+                  <td className={styles.actions}>
+                    <button
+                      className={styles.editBtn}
+                      onClick={() => startEdit(expense)}
+                    >
+                      Edit
+                    </button>
                     <button
                       className={styles.deleteBtn}
                       onClick={() => handleDelete(expense.transactionId)}

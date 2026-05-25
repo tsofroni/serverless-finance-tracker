@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getIncome, addIncome, deleteIncome } from "../services/api";
+import { getIncome, addIncome, editIncome, deleteIncome } from "../services/api";
 import styles from "./IncomeForm.module.css";
 
 const CATEGORIES = ["salary", "freelance", "investment", "gift", "other"];
@@ -17,6 +17,7 @@ function formatCurrency(amount) {
 function IncomeForm() {
   const [income, setIncome] = useState([]);
   const [form, setForm] = useState(INITIAL_FORM);
+  const [editingId, setEditingId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -37,12 +38,36 @@ function IncomeForm() {
     }
   }
 
+  function startEdit(item) {
+    setEditingId(item.transactionId);
+    setError(null);
+    setForm({
+      amount: String(item.amount),
+      category: item.category,
+      description: item.description || "",
+      date: item.date,
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setForm({ ...INITIAL_FORM, date: today() });
+    setError(null);
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError(null);
     try {
       setSubmitting(true);
-      await addIncome({ ...form, amount: parseFloat(form.amount) });
+      const payload = { ...form, amount: parseFloat(form.amount) };
+      if (editingId) {
+        await editIncome(editingId, payload);
+        setEditingId(null);
+      } else {
+        await addIncome(payload);
+      }
       setForm({ ...INITIAL_FORM, date: today() });
       await load();
     } catch (err) {
@@ -56,6 +81,7 @@ function IncomeForm() {
     setError(null);
     try {
       await deleteIncome(id);
+      if (editingId === id) cancelEdit();
       await load();
     } catch (err) {
       setError(err.message);
@@ -67,7 +93,7 @@ function IncomeForm() {
 
   return (
     <div className={styles.container}>
-      <h2>Income</h2>
+      <h2>{editingId ? "Edit Income" : "Income"}</h2>
 
       {error && <div className={styles.error}>{error}</div>}
 
@@ -106,8 +132,13 @@ function IncomeForm() {
           required
         />
         <button type="submit" disabled={submitting}>
-          {submitting ? "Adding…" : "Add Income"}
+          {submitting ? "Saving…" : editingId ? "Update" : "Add Income"}
         </button>
+        {editingId && (
+          <button type="button" className={styles.cancelBtn} onClick={cancelEdit}>
+            Cancel
+          </button>
+        )}
       </form>
 
       <div className={styles.totalBar}>
@@ -136,7 +167,10 @@ function IncomeForm() {
               </tr>
             ) : (
               sorted.map((item) => (
-                <tr key={item.transactionId}>
+                <tr
+                  key={item.transactionId}
+                  className={editingId === item.transactionId ? styles.editingRow : ""}
+                >
                   <td>{item.date}</td>
                   <td>
                     <span className={styles.badge}>{item.category}</span>
@@ -145,7 +179,13 @@ function IncomeForm() {
                   <td className={styles.amountCell}>
                     {formatCurrency(item.amount)}
                   </td>
-                  <td>
+                  <td className={styles.actions}>
+                    <button
+                      className={styles.editBtn}
+                      onClick={() => startEdit(item)}
+                    >
+                      Edit
+                    </button>
                     <button
                       className={styles.deleteBtn}
                       onClick={() => handleDelete(item.transactionId)}
