@@ -1,0 +1,129 @@
+name: Deploy Backend Lambdas
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+
+jobs:
+  # -----------------------------------------------------------------------
+  # Step 1: detect which functions were touched.
+  # A change to backend/shared/ triggers a redeploy of ALL functions
+  # that depend on it, because shared/ is bundled into every ZIP.
+  # -----------------------------------------------------------------------
+  detect-changes:
+    name: Detect changed functions
+    runs-on: ubuntu-latest
+    outputs:
+      expenses:        ${{ steps.filter.outputs.expenses }}
+      income:          ${{ steps.filter.outputs.income }}
+      savings:         ${{ steps.filter.outputs.savings }}
+      budget:          ${{ steps.filter.outputs.budget }}
+      summary:         ${{ steps.filter.outputs.summary }}
+      weekly_analyzer: ${{ steps.filter.outputs.weekly_analyzer }}
+      alert_notifier:  ${{ steps.filter.outputs.alert_notifier }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            expenses:
+              - 'backend/expenses/**'
+              - 'backend/shared/**'
+            income:
+              - 'backend/income/**'
+              - 'backend/shared/**'
+            savings:
+              - 'backend/savings/**'
+              - 'backend/shared/**'
+            budget:
+              - 'backend/budget/**'
+              - 'backend/shared/**'
+            summary:
+              - 'backend/summary/**'
+              - 'backend/shared/**'
+            weekly_analyzer:
+              - 'backend/weekly-analyzer/**'
+              - 'backend/shared/**'
+            alert_notifier:
+              - 'backend/alert-notifier/**'
+              - 'backend/shared/**'
+
+  # -----------------------------------------------------------------------
+  # Step 2: package and deploy only the functions that changed.
+  # Each Lambda ZIP contains: handler.py + shared/ (bundled, no Layers).
+  # -----------------------------------------------------------------------
+  deploy:
+    name: Package & deploy changed functions
+    needs: detect-changes
+    runs-on: ubuntu-latest
+    # Only run if at least one function actually changed
+    if: |
+      needs.detect-changes.outputs.expenses == 'true' ||
+      needs.detect-changes.outputs.income == 'true' ||
+      needs.detect-changes.outputs.savings == 'true' ||
+      needs.detect-changes.outputs.budget == 'true' ||
+      needs.detect-changes.outputs.summary == 'true' ||
+      needs.detect-changes.outputs.weekly_analyzer == 'true' ||
+      needs.detect-changes.outputs.alert_notifier == 'true'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Package and deploy changed functions
+        env:
+          CHANGED_EXPENSES:        ${{ needs.detect-changes.outputs.expenses }}
+          CHANGED_INCOME:          ${{ needs.detect-changes.outputs.income }}
+          CHANGED_SAVINGS:         ${{ needs.detect-changes.outputs.savings }}
+          CHANGED_BUDGET:          ${{ needs.detect-changes.outputs.budget }}
+          CHANGED_SUMMARY:         ${{ needs.detect-changes.outputs.summary }}
+          CHANGED_WEEKLY_ANALYZER: ${{ needs.detect-changes.outputs.weekly_analyzer }}
+          CHANGED_ALERT_NOTIFIER:  ${{ needs.detect-changes.outputs.alert_notifier }}
+        run: |
+          # Packages handler.py + shared/ into a ZIP, then deploys to Lambda.
+          deploy_function() {
+            local func_dir="$1"      # e.g. backend/expenses
+            local lambda_name="$2"   # e.g. finance-tracker-expenses
+            local changed="$3"       # "true" or "false"
+
+            if [ "$changed" != "true" ]; then
+              echo "Skipping $lambda_name (no changes detected)"
+              return
+            fi
+
+            echo "==> Packaging $lambda_name..."
+            local pkg_dir
+            pkg_dir=$(mktemp -d)
+            cp "$func_dir/handler.py" "$pkg_dir/"
+            cp -r backend/shared "$pkg_dir/"
+
+            local zip_path="/tmp/${lambda_name}.zip"
+            (cd "$pkg_dir" && zip -qr "$zip_path" .)
+            rm -rf "$pkg_dir"
+
+            echo "==> Deploying to $lambda_name..."
+            aws lambda update-function-code \
+              --function-name "$lambda_name" \
+              --zip-file "fileb://$zip_path" \
+              --output text --query 'FunctionName'
+
+            rm -f "$zip_path"
+            echo "    Done."
+          }
+
+          deploy_function "backend/expenses"        "finance-tracker-expenses"        "$CHANGED_EXPENSES"
+          deploy_function "backend/income"          "finance-tracker-income"          "$CHANGED_INCOME"
+          deploy_function "backend/savings"         "finance-tracker-savings"         "$CHANGED_SAVINGS"
+          deploy_function "backend/budget"          "finance-tracker-budget"          "$CHANGED_BUDGET"
+          deploy_function "backend/summary"         "finance-tracker-summary"         "$CHANGED_SUMMARY"
+          deploy_function "backend/weekly-analyzer" "finance-tracker-weekly-analyzer" "$CHANGED_WEEKLY_ANALYZER"
+          deploy_function "backend/alert-notifier"  "finance-tracker-alert-notifier"  "$CHANGED_ALERT_NOTIFIER"

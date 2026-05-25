@@ -156,11 +156,44 @@ Estimated setup time: ~45 minutes for a first deployment.
 
 ---
 
+## CI/CD
+
+This project uses **GitHub Actions** for automated deployments on every push to `main`.
+
+### Frontend pipeline ([`.github/workflows/deploy-frontend.yml`](.github/workflows/deploy-frontend.yml))
+
+Triggers on any change inside `frontend/`:
+1. `npm ci` → `npm run build` (with `VITE_API_URL` injected from GitHub Secrets)
+2. `aws s3 sync` — uploads hashed assets with `immutable` cache headers; `index.html` with `no-cache`
+3. `aws cloudfront create-invalidation` — flushes the CDN edge caches
+
+### Backend pipeline ([`.github/workflows/deploy-backend.yml`](.github/workflows/deploy-backend.yml))
+
+Triggers on any change inside `backend/`. Uses [dorny/paths-filter](https://github.com/dorny/paths-filter) to detect which functions changed — a change to `backend/shared/` triggers a redeploy of all 7 functions (since `shared/` is bundled into every ZIP). Only changed functions are repackaged and deployed via `aws lambda update-function-code`.
+
+### Required GitHub Secrets
+
+Go to **Settings → Secrets and variables → Actions** and add:
+
+| Secret | Description |
+|---|---|
+| `AWS_ACCESS_KEY_ID` | IAM user access key |
+| `AWS_SECRET_ACCESS_KEY` | IAM user secret key |
+| `AWS_REGION` | e.g. `eu-central-1` |
+| `S3_BUCKET_NAME` | Frontend S3 bucket name |
+| `CLOUDFRONT_DISTRIBUTION_ID` | CloudFront distribution ID |
+| `VITE_API_URL` | API Gateway invoke URL + `/prod` |
+
+See [docs/cicd-aws-guide.md](docs/cicd-aws-guide.md) for the IAM policy the user needs, and for an alternative implementation using **AWS CodePipeline + CodeBuild** or **AWS Amplify**.
+
+---
+
 ## Documentation
 
 | Document | Contents |
 |---|---|
 | [docs/setup-guide.md](docs/setup-guide.md) | Full 10-step AWS Console deployment walkthrough |
+| [docs/cicd-aws-guide.md](docs/cicd-aws-guide.md) | CI/CD with CodePipeline, CodeBuild, and Amplify |
 | [docs/api-documentation.md](docs/api-documentation.md) | All API endpoints, request/response schemas |
 | [docs/dynamodb-schema.md](docs/dynamodb-schema.md) | DynamoDB table definitions and example items |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Component breakdown, data flow, security model |
