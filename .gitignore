@@ -6,3 +6,5 @@ __pycache__/
 .aws/
 dist/
 .DS_Store
+build/
+*.zip
