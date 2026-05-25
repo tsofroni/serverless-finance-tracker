@@ -10,7 +10,7 @@
 }
 
 .hint {
-  color: #666;
+  color: var(--text-hint);
   font-size: 0.9rem;
 }
 
@@ -21,10 +21,10 @@
 }
 
 .card {
-  background: #fff;
+  background: var(--surface);
   border-radius: 10px;
   padding: 1.1rem 1.25rem;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
@@ -34,7 +34,7 @@
   font-size: 0.95rem;
   font-weight: 600;
   text-transform: capitalize;
-  color: #333;
+  color: var(--text);
 }
 
 .current {
@@ -45,20 +45,25 @@
   padding: 0.25rem 0.5rem;
 }
 
+:global(:root.dark) .current {
+  background: #0f2a1a;
+}
+
 .fieldLabel {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
   font-size: 0.8rem;
-  color: #666;
+  color: var(--text-hint);
 }
 
 .fieldLabel input {
   padding: 0.45rem 0.65rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border-input);
   border-radius: 6px;
   font-size: 0.9rem;
-  background: #fafafa;
+  background: var(--input-bg);
+  color: var(--text);
 }
 
 .fieldLabel input:focus {

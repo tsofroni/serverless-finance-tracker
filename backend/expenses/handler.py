@@ -63,6 +63,7 @@ def _create(body):
                 "category": category,
                 "description": description,
                 "date": date,
+                "recurring": bool(body.get("recurring", False)),
             }
         )
         return success({"message": "Expense created", "transactionId": transaction_id}, 201)
@@ -86,13 +87,14 @@ def _update(body):
         # 'date' is a DynamoDB reserved word — must be aliased
         _get_table().update_item(
             Key={"userId": USER_ID, "transactionId": transaction_id},
-            UpdateExpression="SET amount = :amt, category = :cat, description = :desc, #dt = :date",
+            UpdateExpression="SET amount = :amt, category = :cat, description = :desc, #dt = :date, recurring = :rec",
             ExpressionAttributeNames={"#dt": "date"},
             ExpressionAttributeValues={
                 ":amt": Decimal(str(amount)),
                 ":cat": category,
                 ":desc": description,
                 ":date": date,
+                ":rec": bool(body.get("recurring", False)),
             },
         )
         return success({"message": "Expense updated"})

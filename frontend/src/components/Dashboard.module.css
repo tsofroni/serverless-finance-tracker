@@ -12,7 +12,7 @@
 .loading,
 .errorMsg,
 .empty {
-  color: #666;
+  color: var(--text-muted);
   font-style: italic;
   margin-top: 1rem;
 }
@@ -28,18 +28,18 @@
 }
 
 .card {
-  background: #fff;
+  background: var(--surface);
   border-radius: 10px;
   padding: 1.25rem 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  gap: 0.25rem;
+  box-shadow: var(--shadow);
 }
 
 .cardLabel {
   font-size: 0.8rem;
-  color: #888;
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -47,6 +47,19 @@
 .cardAmount {
   font-size: 1.4rem;
   font-weight: 700;
+}
+
+.cardDelta {
+  font-size: 0.78rem;
+  margin-top: 0.1rem;
+}
+
+.deltaUp {
+  color: #27ae60;
+}
+
+.deltaDown {
+  color: #e74c3c;
 }
 
 .income {
@@ -66,10 +79,10 @@
 }
 
 .section {
-  background: #fff;
+  background: var(--surface);
   border-radius: 10px;
   padding: 1.25rem 1.5rem;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -78,7 +91,7 @@
 .section h3 {
   font-size: 0.95rem;
   font-weight: 600;
-  color: #444;
+  color: var(--text-secondary);
   margin-bottom: 0.25rem;
 }
 
@@ -92,11 +105,12 @@
   display: flex;
   justify-content: space-between;
   font-size: 0.9rem;
+  color: var(--text);
 }
 
 .progressTrack {
   height: 8px;
-  background: #eee;
+  background: var(--border);
   border-radius: 4px;
   overflow: hidden;
 }
@@ -113,11 +127,12 @@
   align-items: center;
   gap: 0.75rem;
   font-size: 0.9rem;
+  color: var(--text);
 }
 
 .catName {
   text-transform: capitalize;
-  width: 110px;
+  width: 120px;
   flex-shrink: 0;
 }
 
@@ -126,6 +141,29 @@
 }
 
 .catPercent {
-  color: #888;
+  color: var(--text-muted);
   font-size: 0.82rem;
+}
+
+/* Sparkline */
+.sparklineSection {
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sparklineSection h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.sparkline {
+  display: block;
+  width: 100%;
+  overflow: visible;
 }
