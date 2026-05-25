@@ -18,26 +18,31 @@ def _get_table():
 
 def handler(event, context):
     method = event.get("httpMethod", "")
-    # Read ID from query params — avoids per-sub-resource CORS configuration
-    query_params = event.get("queryStringParameters") or {}
-    transaction_id = query_params.get("transactionId")
 
     if method == "OPTIONS":
         return success({})
-    if method == "POST":
-        return _create(event)
     if method == "GET":
         return _list()
-    if method == "PUT":
-        return _update(event, transaction_id)
-    if method == "DELETE":
-        return _delete(transaction_id)
+    if method == "POST":
+        try:
+            body = json.loads(event.get("body") or "{}")
+        except Exception:
+            return error("Invalid JSON in request body")
+
+        action = body.get("action", "create")
+        if action == "create":
+            return _create(body)
+        if action == "update":
+            return _update(body)
+        if action == "delete":
+            return _delete(body.get("transactionId"))
+        return error(f"Unknown action: '{action}'")
+
     return error("Method not allowed", 405)
 
 
-def _create(event):
+def _create(body):
     try:
-        body = json.loads(event.get("body") or "{}")
         amount = body.get("amount")
         category = body.get("category")
         description = body.get("description", "")
@@ -65,22 +70,11 @@ def _create(event):
         return error(str(exc), 500)
 
 
-def _list():
-    try:
-        response = _get_table().query(
-            KeyConditionExpression=Key("userId").eq(USER_ID),
-            FilterExpression=Attr("type").eq("expense"),
-        )
-        return success({"expenses": response.get("Items", [])})
-    except Exception as exc:
-        return error(str(exc), 500)
-
-
-def _update(event, transaction_id):
+def _update(body):
+    transaction_id = body.get("transactionId")
     if not transaction_id:
-        return error("transactionId query parameter is required")
+        return error("transactionId is required")
     try:
-        body = json.loads(event.get("body") or "{}")
         amount = body.get("amount")
         category = body.get("category")
         description = body.get("description", "")
@@ -89,7 +83,7 @@ def _update(event, transaction_id):
         if amount is None or not category or not date:
             return error("Missing required fields: amount, category, date")
 
-        # 'date' is a DynamoDB reserved word — alias it with ExpressionAttributeNames
+        # 'date' is a DynamoDB reserved word — must be aliased
         _get_table().update_item(
             Key={"userId": USER_ID, "transactionId": transaction_id},
             UpdateExpression="SET amount = :amt, category = :cat, description = :desc, #dt = :date",
@@ -108,11 +102,22 @@ def _update(event, transaction_id):
 
 def _delete(transaction_id):
     if not transaction_id:
-        return error("transactionId query parameter is required")
+        return error("transactionId is required")
     try:
         _get_table().delete_item(
             Key={"userId": USER_ID, "transactionId": transaction_id}
         )
         return success({"message": "Expense deleted"})
+    except Exception as exc:
+        return error(str(exc), 500)
+
+
+def _list():
+    try:
+        response = _get_table().query(
+            KeyConditionExpression=Key("userId").eq(USER_ID),
+            FilterExpression=Attr("type").eq("expense"),
+        )
+        return success({"expenses": response.get("Items", [])})
     except Exception as exc:
         return error(str(exc), 500)

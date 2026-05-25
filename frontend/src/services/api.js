@@ -27,46 +27,67 @@ async function request(path, options = {}) {
   return data;
 }
 
+// All mutating operations use POST with an "action" field.
+// This avoids CORS preflight issues with DELETE/PUT on API Gateway sub-resources.
+
 // Expenses
 export const getExpenses = () => request("/expenses");
 export const addExpense = (data) =>
-  request("/expenses", { method: "POST", body: JSON.stringify(data) });
+  request("/expenses", {
+    method: "POST",
+    body: JSON.stringify({ action: "create", ...data }),
+  });
 export const editExpense = (id, data) =>
-  request(`/expenses?transactionId=${encodeURIComponent(id)}`, {
-    method: "PUT",
-    body: JSON.stringify(data),
+  request("/expenses", {
+    method: "POST",
+    body: JSON.stringify({ action: "update", transactionId: id, ...data }),
   });
 export const deleteExpense = (id) =>
-  request(`/expenses?transactionId=${encodeURIComponent(id)}`, { method: "DELETE" });
+  request("/expenses", {
+    method: "POST",
+    body: JSON.stringify({ action: "delete", transactionId: id }),
+  });
 
 // Income
 export const getIncome = () => request("/income");
 export const addIncome = (data) =>
-  request("/income", { method: "POST", body: JSON.stringify(data) });
+  request("/income", {
+    method: "POST",
+    body: JSON.stringify({ action: "create", ...data }),
+  });
 export const editIncome = (id, data) =>
-  request(`/income?transactionId=${encodeURIComponent(id)}`, {
-    method: "PUT",
-    body: JSON.stringify(data),
+  request("/income", {
+    method: "POST",
+    body: JSON.stringify({ action: "update", transactionId: id, ...data }),
   });
 export const deleteIncome = (id) =>
-  request(`/income?transactionId=${encodeURIComponent(id)}`, { method: "DELETE" });
+  request("/income", {
+    method: "POST",
+    body: JSON.stringify({ action: "delete", transactionId: id }),
+  });
 
 // Savings goals
 export const getSavings = () => request("/savings");
 export const addSavingGoal = (data) =>
-  request("/savings", { method: "POST", body: JSON.stringify(data) });
+  request("/savings", {
+    method: "POST",
+    body: JSON.stringify({ action: "create", ...data }),
+  });
 export const depositToGoal = (id, amount) =>
-  request(`/savings?goalId=${encodeURIComponent(id)}`, {
-    method: "PUT",
-    body: JSON.stringify({ deposit: amount }),
+  request("/savings", {
+    method: "POST",
+    body: JSON.stringify({ action: "deposit", goalId: id, amount }),
   });
 export const editSavingGoal = (id, data) =>
-  request(`/savings?goalId=${encodeURIComponent(id)}`, {
-    method: "PUT",
-    body: JSON.stringify(data),
+  request("/savings", {
+    method: "POST",
+    body: JSON.stringify({ action: "update", goalId: id, ...data }),
   });
 export const deleteSavingGoal = (id) =>
-  request(`/savings?goalId=${encodeURIComponent(id)}`, { method: "DELETE" });
+  request("/savings", {
+    method: "POST",
+    body: JSON.stringify({ action: "delete", goalId: id }),
+  });
 
 // Budget
 export const getBudgets = () => request("/budget");

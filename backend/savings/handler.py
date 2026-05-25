@@ -17,26 +17,33 @@ def _get_table():
 
 def handler(event, context):
     method = event.get("httpMethod", "")
-    # Read ID from query params — avoids per-sub-resource CORS configuration
-    query_params = event.get("queryStringParameters") or {}
-    goal_id = query_params.get("goalId")
 
     if method == "OPTIONS":
         return success({})
-    if method == "POST":
-        return _create(event)
     if method == "GET":
         return _list()
-    if method == "PUT":
-        return _update(event, goal_id)
-    if method == "DELETE":
-        return _delete(goal_id)
+    if method == "POST":
+        try:
+            body = json.loads(event.get("body") or "{}")
+        except Exception:
+            return error("Invalid JSON in request body")
+
+        action = body.get("action", "create")
+        if action == "create":
+            return _create(body)
+        if action == "deposit":
+            return _deposit(body)
+        if action == "update":
+            return _update(body)
+        if action == "delete":
+            return _delete(body.get("goalId"))
+        return error(f"Unknown action: '{action}'")
+
     return error("Method not allowed", 405)
 
 
-def _create(event):
+def _create(body):
     try:
-        body = json.loads(event.get("body") or "{}")
         name = body.get("name")
         target_amount = body.get("targetAmount")
         deadline = body.get("deadline")
@@ -61,41 +68,36 @@ def _create(event):
         return error(str(exc), 500)
 
 
-def _list():
+def _deposit(body):
+    goal_id = body.get("goalId")
+    if not goal_id:
+        return error("goalId is required")
     try:
-        response = _get_table().query(
-            KeyConditionExpression=Key("userId").eq(USER_ID)
+        amount = body.get("amount")
+        if amount is None or Decimal(str(amount)) <= 0:
+            return error("amount must be a positive number")
+
+        _get_table().update_item(
+            Key={"userId": USER_ID, "goalId": goal_id},
+            UpdateExpression="ADD currentAmount :amt",
+            ExpressionAttributeValues={":amt": Decimal(str(amount))},
         )
-        return success({"goals": response.get("Items", [])})
+        return success({"message": "Deposit added"})
     except Exception as exc:
         return error(str(exc), 500)
 
 
-def _update(event, goal_id):
+def _update(body):
+    goal_id = body.get("goalId")
     if not goal_id:
-        return error("goalId query parameter is required")
+        return error("goalId is required")
     try:
-        body = json.loads(event.get("body") or "{}")
-
-        # Deposit: body contains { "deposit": <amount> }
-        if "deposit" in body:
-            deposit = Decimal(str(body["deposit"]))
-            if deposit <= 0:
-                return error("deposit must be a positive number")
-            _get_table().update_item(
-                Key={"userId": USER_ID, "goalId": goal_id},
-                UpdateExpression="ADD currentAmount :amt",
-                ExpressionAttributeValues={":amt": deposit},
-            )
-            return success({"message": "Deposit added"})
-
-        # Full edit: body contains { name, targetAmount, deadline, currentAmount? }
         updates = []
         values = {}
         names = {}
 
         if "name" in body:
-            # 'name' is a DynamoDB reserved word
+            # 'name' is a DynamoDB reserved word — must be aliased
             updates.append("#nm = :name")
             names["#nm"] = "name"
             values[":name"] = body["name"]
@@ -128,9 +130,19 @@ def _update(event, goal_id):
 
 def _delete(goal_id):
     if not goal_id:
-        return error("goalId query parameter is required")
+        return error("goalId is required")
     try:
         _get_table().delete_item(Key={"userId": USER_ID, "goalId": goal_id})
         return success({"message": "Savings goal deleted"})
+    except Exception as exc:
+        return error(str(exc), 500)
+
+
+def _list():
+    try:
+        response = _get_table().query(
+            KeyConditionExpression=Key("userId").eq(USER_ID)
+        )
+        return success({"goals": response.get("Items", [])})
     except Exception as exc:
         return error(str(exc), 500)
