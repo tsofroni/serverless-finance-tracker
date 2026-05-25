@@ -137,13 +137,12 @@ Copy the relevant `handler.py` from `backend/<function-name>/` and include the e
 | Resource | Method | Lambda Function |
 |---|---|---|
 | `/expenses` | GET, POST | `finance-tracker-expenses` |
-| `/expenses/{transactionId}` | DELETE | `finance-tracker-expenses` |
 | `/income` | GET, POST | `finance-tracker-income` |
-| `/income/{transactionId}` | DELETE | `finance-tracker-income` |
 | `/savings` | GET, POST | `finance-tracker-savings` |
-| `/savings/{goalId}` | PUT, DELETE | `finance-tracker-savings` |
 | `/budget` | GET, POST | `finance-tracker-budget` |
 | `/summary` | GET | `finance-tracker-summary` |
+
+> **Why no DELETE/PUT methods?** All mutating operations (create, update, delete, deposit) are dispatched through `POST` using an `action` field in the JSON body. This avoids browser CORS preflight complexity with API Gateway — see [LESSONS_LEARNED.md](../LESSONS_LEARNED.md#1-cors-and-api-gateway--the-preflight-trap) for the full explanation.
 
 4. **Deploy** the API to a new stage named `prod`.
 5. Note the **Invoke URL** — you will need it for the frontend `.env.local`.
